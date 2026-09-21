@@ -160,6 +160,27 @@
 
     var botEl = addMsg('', 'bot');
     var accumulated = '';
+    var LEAD_MARKER = '[[CAPTURE_LEAD]]';
+
+    // The model sometimes ends a reply with the literal marker text above, so
+    // the server knows to show the lead-capture form. That marker is never
+    // meant to be seen — but since replies stream in piece by piece, the
+    // marker's characters would otherwise flash on screen as they arrive,
+    // one at a time, before the server-side strip (which only runs once the
+    // full reply is done) ever has a chance to remove them. This strips any
+    // complete marker, and hides a partial marker forming at the very end of
+    // the text so far, so nothing bracket-shaped is ever actually rendered.
+    function displayText(text) {
+      var out = text.split(LEAD_MARKER).join('');
+      for (var i = LEAD_MARKER.length - 1; i > 0; i--) {
+        var partial = LEAD_MARKER.slice(0, i);
+        if (out.slice(-partial.length) === partial) {
+          out = out.slice(0, out.length - partial.length);
+          break;
+        }
+      }
+      return out;
+    }
 
     fetch(endpoint + '/api/chat/stream', {
       method: 'POST',
@@ -187,12 +208,15 @@
 
               if (eventName === 'delta') {
                 accumulated += data.text;
-                botEl.textContent = accumulated;
+                botEl.textContent = displayText(accumulated);
                 body.scrollTop = body.scrollHeight;
               } else if (eventName === 'done') {
+                // final pass in case a trailing partial-marker trim above
+                // left anything or the marker landed differently than expected
+                botEl.textContent = displayText(accumulated).trim();
                 // 1. memory — record this turn once it's complete
                 history.push({ role: 'user', content: text });
-                history.push({ role: 'assistant', content: accumulated.trim() });
+                history.push({ role: 'assistant', content: displayText(accumulated).trim() });
                 if (data.captureLead) showLeadForm();
               } else if (eventName === 'error') {
                 botEl.textContent = "Sorry, something went wrong. Try again shortly.";
