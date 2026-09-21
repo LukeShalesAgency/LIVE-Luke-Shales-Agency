@@ -189,7 +189,7 @@ async function draftKnowledgeFromPages(client, pages, currentText) {
 
   const completion = await anthropic.messages.create({
     model: 'claude-sonnet-5',
-    max_tokens: 4000,
+    max_tokens: 8000,
     system:
       "You build a business's chatbot knowledge base from raw scraped website text. Output plain-text " +
       'paragraphs, one per fact/topic (hours, pricing, services, service area, policies, location, ' +
@@ -197,7 +197,9 @@ async function draftKnowledgeFromPages(client, pages, currentText) {
       'fluff, and no invented facts — use only what appears in the scraped pages. If a topic is covered ' +
       'on multiple pages, merge it into a single clear paragraph rather than repeating it. If the CURRENT ' +
       'knowledge base already has good paragraphs, keep them and only add new ones or update ones the ' +
-      'scrape contradicts. Reply with strict JSON only, no markdown fences: ' +
+      'scrape contradicts. draftText must never be empty as long as SCRAPED PAGES has any real content — ' +
+      'if you genuinely find nothing usable, still return whatever CURRENT KNOWLEDGE BASE had rather than ' +
+      'an empty string. Reply with strict JSON only, no markdown fences, no code block: ' +
       '{"draftText": "<the full knowledge base>", "summary": "<one or two sentences on what was drafted, ' +
       'and anything you noticed was missing or unclear on the site>"}',
     messages: [
@@ -205,13 +207,39 @@ async function draftKnowledgeFromPages(client, pages, currentText) {
     ],
   });
 
-  const raw = completion.content?.[0]?.text?.trim() || '{}';
-  try {
-    const parsed = JSON.parse(raw);
-    return { draftText: parsed.draftText || currentText, summary: parsed.summary || `Drafted from ${pages.length} page(s).` };
-  } catch {
-    return { draftText: currentText, summary: `Could not parse a clean draft. Raw model output: ${raw.slice(0, 300)}` };
+  // Find the first actual text block rather than assuming content[0] is one
+  // (a response can in principle include other block types first).
+  const textBlock = (completion.content || []).find((b) => b.type === 'text');
+  let raw = (textBlock?.text || '').trim();
+  // Strip a markdown code fence if the model added one despite instructions
+  // not to, rather than letting that alone break the JSON parse below.
+  if (raw.startsWith('```')) {
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
   }
+  if (!raw) raw = '{}';
+
+  console.log(`[draftKnowledgeFromPages] ${client.clientId}: raw model output (first 500 chars): ${raw.slice(0, 500)}`);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { draftText: currentText, summary: `Could not parse a clean draft. Raw model output: ${raw.slice(0, 300)}`, failed: true };
+  }
+
+  const draftText = typeof parsed.draftText === 'string' ? parsed.draftText.trim() : '';
+  if (!draftText) {
+    // The model returned parseable JSON but with nothing usable in it — treat
+    // this as a real failure instead of silently reporting success with
+    // empty (or unchanged) content, so the dashboard shows an honest error.
+    return {
+      draftText: currentText,
+      summary: 'The AI returned an empty draft — nothing was saved. This usually means the scraped pages had too little usable text, or a temporary API issue. Try scraping again.',
+      failed: true,
+    };
+  }
+
+  return { draftText, summary: parsed.summary || `Drafted from ${pages.length} page(s).` };
 }
 
 function appendJsonl(dir, clientId, entry) {
@@ -643,7 +671,13 @@ app.post('/api/clients/:id/knowledge/scrape', async (req, res) => {
   }
 
   try {
-    const { draftText, summary } = await draftKnowledgeFromPages(client, pages, currentText);
+    const { draftText, summary, failed } = await draftKnowledgeFromPages(client, pages, currentText);
+
+    if (failed) {
+      // A real drafting failure — never auto-apply, and say so plainly rather
+      // than reporting success with nothing (or stale content) saved.
+      return res.status(502).json({ error: summary, pagesScraped: pages.map((p) => p.url), applied: false });
+    }
 
     if (client.autoApplyKnowledgeEdits && draftText !== currentText) {
       writeKnowledge(client.clientId, draftText, { source: 'scrape-auto', summary });
@@ -738,7 +772,19 @@ app.post('/api/clients', async (req, res) => {
     }
 
     try {
-      const { draftText, summary } = await draftKnowledgeFromPages(client, pages, '');
+      const { draftText, summary, failed } = await draftKnowledgeFromPages(client, pages, '');
+
+      if (failed) {
+        // Same real-failure case as the scrape endpoint — never write empty
+        // content and never report built:true when nothing usable came back.
+        return res.json({
+          client,
+          built: false,
+          pagesScraped: pages.map((p) => p.url),
+          error: `Created "${businessName}" and crawled the site, but ${summary.charAt(0).toLowerCase()}${summary.slice(1)} You can retry the scrape from admin.html, or add the knowledge base by hand.`,
+        });
+      }
+
       if (client.autoApplyKnowledgeEdits) {
         writeKnowledge(client.clientId, draftText, { source: 'scrape-auto', summary: `Initial build: ${summary}` });
         return res.json({ client, built: true, pagesScraped: pages.map((p) => p.url), summary });
