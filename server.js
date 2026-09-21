@@ -35,6 +35,7 @@ const { topChunks, readKnowledge, writeKnowledge, rollbackKnowledge, knowledgeCh
 const { crawlSites, guessBusinessName, fetchHomepage } = require('./lib/scraper');
 const { computeStats, readJsonl, ANALYTICS_DIR, LEADS_DIR, HANDOFFS_DIR } = require('./lib/stats');
 const { buildReport, saveReport, listSavedReports, sendReportWebhook } = require('./lib/report');
+const { ensureDir } = require('./lib/paths');
 
 const app = express();
 app.use(cors());
@@ -80,8 +81,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // them, registered here so it runs before any of those routes further down.
 app.use('/api/clients', requireAdminAuth);
 
-const CLIENTS_DIR = path.join(__dirname, 'clients');
-[ANALYTICS_DIR, LEADS_DIR, HANDOFFS_DIR].forEach((d) => { if (!fs.existsSync(d)) fs.mkdirSync(d); });
+const CLIENTS_DIR = ensureDir('clients');
+[ANALYTICS_DIR, LEADS_DIR, HANDOFFS_DIR].forEach((d) => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 

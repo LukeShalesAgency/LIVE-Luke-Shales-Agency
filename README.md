@@ -141,6 +141,24 @@ testing.
 - Set `ANTHROPIC_API_KEY` (and optionally `PORT`) as environment variables in
   whichever platform you use — never commit `.env` to the repo.
 
+### Persistent disk (don't skip this before you have real clients)
+
+By default, every client, their knowledge base, leads, and everything else
+this app writes lives as plain files right in the project folder. Most
+hosting platforms — Render included — wipe that folder clean on every
+redeploy unless you attach persistent storage. Skip this and pushing an
+update later could wipe out every client you've built.
+
+1. In Render, on your service, add a **Disk** and mount it at `/var/data`
+   (any empty path works, but `/var/data` is the convention).
+2. Add an environment variable: `DATA_DIR` = `/var/data`.
+3. Redeploy. From then on, `clients/`, `knowledge/`, `analytics/`, `leads/`,
+   `handoffs/`, and `reports/` all live on that disk instead of the
+   project folder, and survive every future deploy.
+
+Leave `DATA_DIR` unset for local testing — everything falls back to living
+in the project folder exactly like before, no setup needed.
+
 Once deployed, the client adds one line to their site:
 
 ```html

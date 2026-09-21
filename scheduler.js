@@ -20,8 +20,9 @@ const fs = require('fs');
 const path = require('path');
 const { buildReport, saveReport, sendReportWebhook } = require('./lib/report');
 const { checkClient } = require('./lib/alerts');
+const { dataPath } = require('./lib/paths');
 
-const CLIENTS_DIR = path.join(__dirname, 'clients');
+const CLIENTS_DIR = dataPath('clients');
 
 function listClients() {
   if (!fs.existsSync(CLIENTS_DIR)) return [];

@@ -22,8 +22,9 @@ const fs = require('fs');
 const path = require('path');
 const { computeStats, readJsonl, ANALYTICS_DIR } = require('./stats');
 const { readKnowledge, writeKnowledge } = require('../retrieval');
+const { ensureDir } = require('./paths');
 
-const STATE_FILE = path.join(__dirname, '..', 'reports', '.alert-state.json');
+const STATE_FILE = path.join(ensureDir('reports'), '.alert-state.json');
 
 function loadState() {
   if (!fs.existsSync(STATE_FILE)) return {};

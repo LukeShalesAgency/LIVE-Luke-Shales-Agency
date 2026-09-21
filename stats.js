@@ -5,11 +5,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const { dataPath } = require('./paths');
 
-const ROOT = path.join(__dirname, '..');
-const ANALYTICS_DIR = path.join(ROOT, 'analytics');
-const LEADS_DIR = path.join(ROOT, 'leads');
-const HANDOFFS_DIR = path.join(ROOT, 'handoffs');
+const ANALYTICS_DIR = dataPath('analytics');
+const LEADS_DIR = dataPath('leads');
+const HANDOFFS_DIR = dataPath('handoffs');
 
 function readJsonl(dir, clientId) {
   const file = path.join(dir, `${clientId}.jsonl`);

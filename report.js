@@ -6,9 +6,9 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatsForWindow } = require('./stats');
+const { ensureDir } = require('./paths');
 
-const REPORTS_DIR = path.join(__dirname, '..', 'reports');
-if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR);
+const REPORTS_DIR = ensureDir('reports');
 
 function monthLabel(date) {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

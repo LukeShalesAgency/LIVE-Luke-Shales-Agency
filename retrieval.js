@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { dataPath, ensureDir } = require('./lib/paths');
 
 const STOPWORDS = new Set([
   'a','an','the','is','are','was','were','be','been','being','to','of','in','on','at','for',
@@ -43,7 +44,7 @@ function tokenize(text) {
 }
 
 function loadChunks(clientId) {
-  const file = path.join(__dirname, 'knowledge', `${clientId}.txt`);
+  const file = dataPath('knowledge', `${clientId}.txt`);
   if (!fs.existsSync(file)) return [];
   return fs
     .readFileSync(file, 'utf8')
@@ -90,7 +91,7 @@ function topChunks(clientId, query, k = 3) {
 }
 
 function readKnowledge(clientId) {
-  const file = path.join(__dirname, 'knowledge', `${clientId}.txt`);
+  const file = dataPath('knowledge', `${clientId}.txt`);
   if (!fs.existsSync(file)) return '';
   return fs.readFileSync(file, 'utf8');
 }
@@ -103,9 +104,7 @@ function readKnowledge(clientId) {
 const HISTORY_LIMIT = 20; // keep this many prior versions per client, prune older ones
 
 function knowledgeDir() {
-  const dir = path.join(__dirname, 'knowledge');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-  return dir;
+  return ensureDir('knowledge');
 }
 
 function historyDir(clientId) {
