@@ -82,7 +82,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/clients', requireAdminAuth);
 
 const CLIENTS_DIR = ensureDir('clients');
-[ANALYTICS_DIR, LEADS_DIR, HANDOFFS_DIR].forEach((d) => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+// Same reasoning as lib/paths.js's ensureDir: this used to throw straight
+// out of a top-level statement and crash the ENTIRE server over one
+// unwritable folder (e.g. the disk having a permissions hiccup on just the
+// "analytics" folder), taking down chat and everything else with it. Now it
+// warns and keeps going instead — whatever actually tries to use that
+// folder will surface its own clear error when it's used.
+[ANALYTICS_DIR, LEADS_DIR, HANDOFFS_DIR].forEach((d) => {
+  try {
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  } catch (err) {
+    console.error(
+      `⚠️  Could not create data folder "${d}" (${err.code || err.message}). The app will keep starting, but anything that reads/writes this folder will fail until this is fixed.`
+    );
+  }
+});
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
