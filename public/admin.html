@@ -76,6 +76,7 @@
 
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
       <select id="clientPicker" style="margin-bottom:0;"></select>
+      <button class="save" id="renameBtn" type="button" style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line);" title="Rename this client">Rename</button>
       <button class="save" id="openTabBtn" type="button" title="Open this client in its own tab, so switching clients here doesn't lose your place in that tab">Open in new tab ↗</button>
       <span class="tag" id="statusBadge" style="background: rgba(12,163,12,0.15); color: var(--good);">Active</span>
       <button class="save" id="statusToggleBtn" type="button" style="background: var(--warn); margin-left:auto;">Pause chatbot</button>
@@ -361,6 +362,28 @@
       var url = new URL(window.location.href);
       url.searchParams.set('client', currentClient);
       window.open(url.toString(), '_blank');
+    });
+
+    document.getElementById('renameBtn').addEventListener('click', function(){
+      var btn = this;
+      var c = clientsById[currentClient];
+      var currentName = c ? c.businessName : '';
+      var newName = window.prompt('Rename this client (shown to you here, and used as the default "business" label wherever their name appears — this does not change their client ID or their embed code):', currentName);
+      if (newName === null) return; // cancelled
+      newName = newName.trim();
+      if (!newName || newName === currentName) return;
+      btn.disabled = true;
+      fetch('/api/clients/' + encodeURIComponent(currentClient) + '/rename', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ businessName: newName }),
+      }).then(function(r){
+        if (!r.ok) return r.json().then(function(d){ throw new Error(d.error || 'Could not rename.'); });
+        return r.json();
+      }).then(function(){
+        return loadClients();
+      }).catch(function(err){ alert(err.message || 'Could not rename — check your connection and try again.'); })
+        .finally(function(){ btn.disabled = false; });
     });
 
     function linesToUrls(text){
