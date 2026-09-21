@@ -1,0 +1,25 @@
+{
+  "name": "sitewright-chatbot-kit",
+  "version": "1.0.0",
+  "description": "Embeddable AI chat widget + backend + analytics dashboard, for deploying a per-client trained chatbot.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "reports:now": "node scheduler.js --now",
+    "scheduler": "node scheduler.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  },
+  "optionalDependencies": {
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
