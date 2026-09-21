@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chatbot preview</title>
+<style>
+  body{ margin:0; font-family: system-ui, sans-serif; color:#0b0b0b; background:#fcfcfb; }
+  header{ background:#111827; color:#fff; padding:18px 24px; }
+  header b{ font-size:18px; }
+  main{ max-width: 760px; margin: 0 auto; padding: 40px 24px; }
+  h1{ font-size: 24px; margin-bottom: 8px; }
+  p{ color:#52514e; line-height:1.6; }
+  .note{ margin-top: 40px; padding: 16px; border: 1px dashed #c3c2b7; border-radius: 8px; font-size: 13px; color:#52514e; background:#f9f9f7; }
+  .missing{ padding: 16px; border: 1px solid #e0a; border-radius: 8px; background:#fff0f6; color:#900; }
+</style>
+</head>
+<body>
+  <header><b id="bizLabel">Chatbot preview</b></header>
+  <main>
+    <h1 id="heading">Preview a client's live bot</h1>
+    <p id="instructions">Add <code>?client=THEIR_CLIENT_ID</code> to this page's URL to load that client's real chatbot — e.g. <code>preview.html?client=home</code>. Optionally add <code>&business=Their%20Name</code> and <code>&color=%232563eb</code> to match their branding.</p>
+    <div id="widgetSlot"></div>
+  </main>
+
+  <script>
+    (function(){
+      var params = new URLSearchParams(window.location.search);
+      var clientId = params.get('client');
+      var business = params.get('business') || clientId || 'Client';
+      var color = params.get('color') || '#2563eb';
+
+      document.getElementById('bizLabel').textContent = business;
+
+      if (!clientId){
+        document.getElementById('instructions').outerHTML =
+          '<div class="missing">No client specified. Add <code>?client=THEIR_CLIENT_ID</code> to the URL — that ID is whatever shows in admin.html\'s client dropdown (in parentheses), e.g. <code>preview.html?client=home</code>.</div>';
+        return;
+      }
+
+      document.getElementById('heading').textContent = business + ' — bot preview';
+      document.getElementById('instructions').innerHTML =
+        'Click the chat bubble in the bottom-right corner and ask a real question about ' + business + ' to test what it knows.';
+
+      var s = document.createElement('script');
+      s.src = 'widget.js';
+      s.setAttribute('data-client-id', clientId);
+      s.setAttribute('data-business', business);
+      s.setAttribute('data-color', color);
+      s.setAttribute('data-endpoint', '');
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
