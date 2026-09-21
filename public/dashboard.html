@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chatbot report</title>
+<style>
+  :root{
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --line: #e1e0d9;
+    --series-1: #2a78d6;
+    --good: #0ca30c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --line: #2c2c2a;
+      --series-1: #3987e5;
+      --good: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --line: #2c2c2a;
+    --series-1: #3987e5;
+    --good: #0ca30c;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; font-family: system-ui, -apple-system, sans-serif; background: var(--page); color: var(--text-primary);
+    padding-inline: 20px;
+  }
+  .wrap{ max-width: 720px; margin: 0 auto; padding-block: 32px; }
+  h1{ font-size: 22px; margin: 0 0 4px; }
+  .sub{ color: var(--text-secondary); font-size: 13.5px; margin: 0 0 28px; }
+  .tiles{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+  @media (max-width: 560px){ .tiles{ grid-template-columns: 1fr; } }
+  .tile{ background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .tile .label{ font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .tile .value{ font-size: 26px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .panel{ background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .panel h2{ font-size: 14px; margin: 0 0 14px; }
+  .qrow{ display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding-block: 8px; border-top: 1px solid var(--line); }
+  .qrow:first-of-type{ border-top: none; }
+  .qtext{ font-size: 13.5px; }
+  .qbar-wrap{ display:flex; align-items:center; gap:8px; }
+  .qbar{ height: 8px; border-radius: 4px; background: var(--series-1); }
+  .qcount{ font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; width: 18px; text-align: right; }
+  .empty{ color: var(--text-secondary); font-size: 13.5px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 id="title">Chatbot report</h1>
+    <p class="sub" id="subtitle">Loading…</p>
+
+    <div class="tiles">
+      <div class="tile"><div class="label">Conversations</div><div class="value" id="stat-conversations">–</div></div>
+      <div class="tile"><div class="label">Messages handled</div><div class="value" id="stat-messages">–</div></div>
+      <div class="tile"><div class="label">Answered without fallback</div><div class="value" id="stat-fallback">–</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Most asked questions</h2>
+      <div id="questions"><p class="empty">No conversations logged yet.</p></div>
+    </div>
+  </div>
+
+  <script>
+    var params = new URLSearchParams(location.search);
+    var clientId = params.get('clientId') || 'example';
+    document.getElementById('subtitle').textContent = 'Client: ' + clientId;
+
+    fetch('/api/stats?clientId=' + encodeURIComponent(clientId))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        document.getElementById('stat-conversations').textContent = d.totalConversations;
+        document.getElementById('stat-messages').textContent = d.totalMessages;
+        document.getElementById('stat-fallback').textContent = (100 - d.fallbackRate) + '%';
+
+        var container = document.getElementById('questions');
+        if (!d.topQuestions || d.topQuestions.length === 0) return;
+        container.innerHTML = '';
+        var max = Math.max.apply(null, d.topQuestions.map(function(q){ return q.count; }));
+        d.topQuestions.forEach(function(q){
+          var row = document.createElement('div');
+          row.className = 'qrow';
+          var pct = Math.max(8, Math.round((q.count / max) * 100));
+          row.innerHTML =
+            '<div class="qtext">' + q.question + '</div>' +
+            '<div class="qbar-wrap"><div class="qbar" style="width:' + pct + 'px"></div><span class="qcount">' + q.count + '</span></div>';
+          container.appendChild(row);
+        });
+      })
+      .catch(function(){
+        document.getElementById('subtitle').textContent = 'Could not load stats — is the server running?';
+      });
+  </script>
+</body>
+</html>
