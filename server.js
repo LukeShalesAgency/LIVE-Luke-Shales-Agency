@@ -845,6 +845,19 @@ app.post('/api/clients/:id/status', (req, res) => {
   res.json({ ok: true, status });
 });
 
+// Rename a client — just changes the display name (c.businessName), never
+// the clientId, so the embed code already on their site keeps working.
+app.post('/api/clients/:id/rename', (req, res) => {
+  const { businessName } = req.body || {};
+  const clean = typeof businessName === 'string' ? businessName.trim() : '';
+  if (!clean) return res.status(400).json({ error: 'businessName is required' });
+  const client = loadClient(req.params.id);
+  if (!client) return res.status(404).json({ error: `Unknown clientId "${req.params.id}"` });
+  client.businessName = clean;
+  saveClient(client);
+  res.json({ ok: true, businessName: clean });
+});
+
 app.get('/api/clients/:id/knowledge', (req, res) => {
   res.json({ text: readKnowledge(req.params.id) });
 });
