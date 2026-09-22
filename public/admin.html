@@ -77,6 +77,7 @@
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
       <select id="clientPicker" style="margin-bottom:0;"></select>
       <button class="save" id="renameBtn" type="button" style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line);" title="Rename this client">Rename</button>
+      <button class="save" id="copyDemoBtn" type="button" style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line);" title="Copy a shareable demo link for this client — opens the chat widget on a plain preview page, no code needed on their site">Copy demo link</button>
       <button class="save" id="openTabBtn" type="button" title="Open this client in its own tab, so switching clients here doesn't lose your place in that tab">Open in new tab ↗</button>
       <span class="tag" id="statusBadge" style="background: rgba(12,163,12,0.15); color: var(--good);">Active</span>
       <button class="save" id="statusToggleBtn" type="button" style="background: var(--warn); margin-left:auto;">Pause chatbot</button>
@@ -384,6 +385,27 @@
         return loadClients();
       }).catch(function(err){ alert(err.message || 'Could not rename — check your connection and try again.'); })
         .finally(function(){ btn.disabled = false; });
+    });
+
+    document.getElementById('copyDemoBtn').addEventListener('click', function(){
+      var btn = this;
+      var c = clientsById[currentClient];
+      var business = c ? c.businessName : currentClient;
+      // Builds the same preview.html?client=...&business=... link used
+      // throughout admin.html and in outreach — a plain page anyone can open
+      // (no embed code needed on the client's own site) that loads this
+      // client's real, live chatbot for a demo.
+      var url = new URL('preview.html', window.location.href);
+      url.searchParams.set('client', currentClient);
+      url.searchParams.set('business', business);
+      var text = url.toString();
+      var done = function(){ btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = 'Copy demo link'; }, 1500); };
+      var fail = function(){ btn.textContent = 'Could not copy — see below'; setTimeout(function(){ btn.textContent = 'Copy demo link'; }, 2500); window.prompt('Copy this link:', text); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(fail);
+      } else {
+        fail();
+      }
     });
 
     function linesToUrls(text){
